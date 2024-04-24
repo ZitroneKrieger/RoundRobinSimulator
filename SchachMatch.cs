@@ -15,7 +15,7 @@ namespace RoundRobinSimulator
 
         public decimal? ResultatWeiß { get => _resultatWeiß; set => _resultatWeiß = value; }
         public decimal? ResultatSchwarz { get => _resultatSchwarz; set => _resultatSchwarz = value; }
-        public Player Weiß { get => _weiß; set => _weiß = value; }
+        public Player Weiss { get => _weiß; set => _weiß = value; }
         public Player Schwarz { get => _schwarz; set => _schwarz = value; }
     }
 }
