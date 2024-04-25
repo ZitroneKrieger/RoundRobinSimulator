@@ -77,7 +77,7 @@ namespace MyApp
                         }
                     case 4:
                         {
-                            CreatePredictions(listOfSchachMatchingsPerPlayer, orderedPlayersByName);
+                            CreatePredictions(listOfSchachMatchingsPerPlayer, orderedPlayersByName, allRoundParings);
                             break;
                         }
                     case 9:
@@ -93,75 +93,90 @@ namespace MyApp
 
         }
 
-        private static void CreatePredictions(Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer, List<Player> orderedPlayersByName)
+        private static void CreatePredictions(Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer, List<Player> orderedPlayersByName, List<List<Tuple<Player, Player>>> allRoundParings)
         {
-            Dictionary<Player, List<SchachMatch>> copy = new(listOfSchachMatchingsPerPlayer);
+            //Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer = new(listOfSchachMatchingsPerPlayer);
 
 
-            foreach (var player in listOfSchachMatchingsPerPlayer.Keys)
+            foreach (var round in allRoundParings)
             {
-                foreach (var item in listOfSchachMatchingsPerPlayer[player])
+                foreach (var matchUp in round)
                 {
                     Random rnd = new Random();
                     int luckyNumber = rnd.Next(0, 101);
 
-                    
-
                     decimal likelyNess = 0M;
 
-                    if (item.Weiss.Elo >= item.Schwarz.Elo)
+                    if (matchUp.Item2.Elo >=  matchUp.Item1.Elo)
                     {
-                        likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((item.Schwarz.Elo - item.Weiss.Elo) / 400M)))) * 100;
+                        likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((matchUp.Item1.Elo - matchUp.Item2.Elo) / 400M)))) * 100;
                         decimal zehnProzentVonLikelyNess = likelyNess * 0.10M;
 
-                        GetIndexByName(orderedPlayersByName, item.Weiss.Name, out int indexWeiss);
-                        GetIndexByName(orderedPlayersByName, item.Schwarz.Name, out int indexSchwarz);
+                        GetIndexByName(orderedPlayersByName, matchUp.Item2.Name, out int indexWeiss);
+                        GetIndexByName(orderedPlayersByName, matchUp.Item1.Name, out int indexSchwarz);
 
                         indexWeiss++;
                         indexSchwarz++;
 
                         if (luckyNumber > likelyNess)
                         {
-                            SaveResult(copy, orderedPlayersByName, indexSchwarz, indexWeiss, 1);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 1);
                         }
                         else if (luckyNumber >= likelyNess - zehnProzentVonLikelyNess)
                         {
-                            SaveResult(copy, orderedPlayersByName, indexSchwarz, indexWeiss, 3);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 3);
                         }
                         else
                         {
-                            SaveResult(copy, orderedPlayersByName, indexSchwarz, indexWeiss, 2);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 2);
                         }
                     }
                     else
                     {
-                        likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((item.Weiss.Elo - item.Schwarz.Elo) / 400M)))) * 100;
+                        likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((matchUp.Item2.Elo - matchUp.Item1.Elo) / 400M)))) * 100;
                         decimal zehnProzentVonLikelyNess = likelyNess * 0.10M;
 
-                        GetIndexByName(orderedPlayersByName, item.Weiss.Name, out int indexWeiss);
-                        GetIndexByName(orderedPlayersByName, item.Schwarz.Name, out int indexSchwarz);
+                        GetIndexByName(orderedPlayersByName, matchUp.Item2.Name, out int indexWeiss);
+                        GetIndexByName(orderedPlayersByName, matchUp.Item1.Name, out int indexSchwarz);
 
                         indexWeiss++;
                         indexSchwarz++;
 
                         if (luckyNumber > likelyNess)
                         {
-                            SaveResult(copy, orderedPlayersByName, indexWeiss, indexSchwarz, 1);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 1);
                         }
                         else if (luckyNumber >= likelyNess - zehnProzentVonLikelyNess)
                         {
-                            SaveResult(copy, orderedPlayersByName, indexWeiss, indexSchwarz, 3);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 3);
                         }
                         else
                         {
-                            SaveResult(copy, orderedPlayersByName, indexWeiss, indexSchwarz, 2);
+                            SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 2);
                         }
                     }
                 }
             }
 
-            ShowStandings(orderedPlayersByName, copy);
+            ShowStandings(orderedPlayersByName, listOfSchachMatchingsPerPlayer);
 
+            InitPlayersResults(listOfSchachMatchingsPerPlayer, orderedPlayersByName);
+
+        }
+
+        private static void InitPlayersResults(Dictionary<Player, List<SchachMatch>> playerGameList, List<Player> orderedPlayersByName)
+        {
+
+            foreach (Player player in playerGameList.Keys) 
+            {
+                player.Results.Clear();
+                var matchList = new List<SchachMatch>();
+                foreach (SchachMatch matchUp in playerGameList[player])
+                {
+                    matchUp.ResultatWeiß = null;
+                    matchUp.ResultatSchwarz = null;
+                }
+            }
         }
 
         private static void GetIndexByName(List<Player> orderedPlayersByName, string name, out int index)
@@ -259,8 +274,6 @@ namespace MyApp
                 Console.WriteLine($"| {player.Name,-12}| {cell}");
                 Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count + 1)}");
             }
-
-            Console.WriteLine();
 
             CreateHeaderForStandings(orderedPlayersByName);
             var sumCells = "";
