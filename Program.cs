@@ -14,7 +14,7 @@ namespace MyApp
     internal class Program
     {
         const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 1; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
-        const int BOARDS_TO_BE_PLAYED_ON = 2; // 2 oder 3
+        const int BOARDS_TO_BE_PLAYED_ON = 3; // 2 oder 3
         const int MAX_TRIES_TO_GET_LUCKY = 10000; // timeout damit nicht endlosschleife passiert weil keine SchachMatches mehr passieren können
         static void Main(string[] args)
         {
@@ -523,19 +523,20 @@ namespace MyApp
         {
             var players = new List<Player>();
             players.Add(new Player() { Name = "Marcel", Elo = 1850 });
-            players.Add(new Player() { Name = "Kevin", Elo = 900 });
+            //players.Add(new Player() { Name = "Kevin", Elo = 900 });
+            players.Add(new Player() { Name = "Kathi", Elo = 700 });
             players.Add(new Player() { Name = "Nathalie", Elo = 1100 });
-            players.Add(new Player() { Name = "Michael", Elo = 1000 });
-            players.Add(new Player() { Name = "Kim", Elo = 1000 });
-            players.Add(new Player() { Name = "Boris", Elo = 450 });
+            players.Add(new Player() { Name = "Michael", Elo = 1200 });
+            //players.Add(new Player() { Name = "Kim", Elo = 1000 });
+            players.Add(new Player() { Name = "Boris", Elo = 650 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
-            //players.Add(new Player() { Name = "Angelo", Elo = 350 });
+            players.Add(new Player() { Name = "Angelo", Elo = 350 });
             //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
             //players.Add(new Player() { Name = "Oliver", Elo = 400 });
             //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            players.Add(new Player() { Name = "Zeljko", Elo = 900 });
             //players.Add(new Player() { Name = "Denise", Elo = 300 });
-            //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
+            players.Add(new Player() { Name = "Benedikt", Elo = 600 });
             //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
         }
