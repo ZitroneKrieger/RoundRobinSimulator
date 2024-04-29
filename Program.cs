@@ -75,6 +75,12 @@ namespace MyApp
                             ShowStandings(orderedPlayersByName, listOfSchachMatchingsPerPlayer);
                             break;
                         }
+
+                    case 4:
+                        {
+                            CreatePredictions(listOfSchachMatchingsPerPlayer, orderedPlayersByName, allRoundParings);
+                            break;
+                        }
                     case 9:
                         {
                             numericInput = false;
@@ -88,6 +94,230 @@ namespace MyApp
 
         }
 
+        private static void CreatePredictions(Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer, List<Player> orderedPlayersByName, List<List<Tuple<Player, Player>>> allRoundParings)
+        {
+            //Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer = new(listOfSchachMatchingsPerPlayer);
+
+
+            foreach (var round in allRoundParings)
+            {
+                foreach (var matchUp in round)
+                {
+                    if (!matchUp.Item1.Name.StartsWith("-") && !matchUp.Item2.Name.StartsWith("-"))
+                    {
+                        Random rnd = new Random();
+                        int luckyNumber = rnd.Next(0, 101);
+
+                        decimal likelyNess = 0M;
+
+                        if (matchUp.Item2.Elo >= matchUp.Item1.Elo)
+                        {
+                            likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((matchUp.Item1.Elo - matchUp.Item2.Elo) / 400M)))) * 100;
+                            decimal zehnProzentVonLikelyNess = likelyNess * 0.10M;
+
+                            GetIndexByName(orderedPlayersByName, matchUp.Item2.Name, out int indexWeiss);
+                            GetIndexByName(orderedPlayersByName, matchUp.Item1.Name, out int indexSchwarz);
+
+                            if (luckyNumber > likelyNess)
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 1);
+                            }
+                            else if (luckyNumber >= likelyNess - zehnProzentVonLikelyNess)
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 3);
+                            }
+                            else
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexSchwarz, indexWeiss, 2);
+                            }
+                        }
+                        else
+                        {
+                            likelyNess = (decimal)(1 / (1 + Math.Pow((double)10, (double)((matchUp.Item2.Elo - matchUp.Item1.Elo) / 400M)))) * 100;
+                            decimal zehnProzentVonLikelyNess = likelyNess * 0.10M;
+
+                            GetIndexByName(orderedPlayersByName, matchUp.Item2.Name, out int indexWeiss);
+                            GetIndexByName(orderedPlayersByName, matchUp.Item1.Name, out int indexSchwarz);
+
+                            if (luckyNumber > likelyNess)
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 1);
+                            }
+                            else if (luckyNumber >= likelyNess - zehnProzentVonLikelyNess)
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 3);
+                            }
+                            else
+                            {
+                                SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, indexWeiss, indexSchwarz, 2);
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            ShowStandings(orderedPlayersByName, listOfSchachMatchingsPerPlayer);
+
+            InitPlayersResults(listOfSchachMatchingsPerPlayer, orderedPlayersByName);
+
+        }
+
+        private static void SaveResult(Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer, List<Player> orderedPlayersByName, int indexSchwarz, int indexWeiss, int v)
+        {
+            switch (v)
+            {
+                case 1:
+                    // erster spieler hat gewonnen
+
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexSchwarz]])
+                    {
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 1;
+                            SchachMatch.ResultatWeiß = 0;
+                            SchachMatch.Schwarz.AddWin();
+                            SchachMatch.Weiss.AddLose();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0;
+                            SchachMatch.ResultatWeiß = 1;
+                            SchachMatch.Weiss.AddWin();
+                            SchachMatch.Schwarz.AddLose();
+                            break;
+                        }
+                    }
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexWeiss]])
+                    {
+
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0;
+                            SchachMatch.ResultatWeiß = 1;
+                            SchachMatch.Weiss.AddWin();
+                            SchachMatch.Schwarz.AddLose();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 1;
+                            SchachMatch.ResultatWeiß = 0;
+                            SchachMatch.Schwarz.AddWin();
+                            SchachMatch.Weiss.AddLose();
+                            break;
+                        }
+                    }
+                    break;
+                case 2:
+                    // zweiter spieler hat gewonnen
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexWeiss]])
+                    {
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 1;
+                            SchachMatch.ResultatWeiß = 0;
+                            SchachMatch.Schwarz.AddWin();
+                            SchachMatch.Weiss.AddLose();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0;
+                            SchachMatch.ResultatWeiß = 1;
+                            SchachMatch.Weiss.AddWin();
+                            SchachMatch.Schwarz.AddLose();
+                            break;
+                        }
+                    }
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexSchwarz]])
+                    {
+
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0;
+                            SchachMatch.ResultatWeiß = 1;
+                            SchachMatch.Weiss.AddWin();
+                            SchachMatch.Schwarz.AddLose();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 1;
+                            SchachMatch.ResultatWeiß = 0;
+                            SchachMatch.Schwarz.AddWin();
+                            SchachMatch.Weiss.AddLose();
+                            break;
+                        }
+                    }
+                    break;
+                case 3:
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexWeiss]])
+                    {
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0.5M;
+                            SchachMatch.ResultatWeiß = 0.5M;
+                            SchachMatch.Schwarz.AddDraw();
+                            SchachMatch.Weiss.AddDraw();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0.5M;
+                            SchachMatch.ResultatWeiß = 0.5M;
+                            SchachMatch.Schwarz.AddDraw();
+                            SchachMatch.Weiss.AddDraw();
+                            break;
+                        }
+                    }
+                    foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[indexSchwarz]])
+                    {
+
+                        if (SchachMatch.Schwarz.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Weiss.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0.5M;
+                            SchachMatch.ResultatWeiß = 0.5M;
+                            SchachMatch.Schwarz.AddDraw();
+                            SchachMatch.Weiss.AddDraw();
+                            break;
+                        }
+                        if (SchachMatch.Weiss.Name == orderedPlayersByName[indexSchwarz].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[indexWeiss].Name)
+                        {
+                            SchachMatch.ResultatSchwarz = 0.5M;
+                            SchachMatch.ResultatWeiß = 0.5M;
+                            SchachMatch.Schwarz.AddDraw();
+                            SchachMatch.Weiss.AddDraw();
+                            break;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private static void InitPlayersResults(Dictionary<Player, List<SchachMatch>> playerGameList, List<Player> orderedPlayersByName)
+        {
+
+            foreach (Player player in playerGameList.Keys)
+            {
+                player.Results.Clear();
+                var matchList = new List<SchachMatch>();
+                foreach (SchachMatch matchUp in playerGameList[player])
+                {
+                    matchUp.ResultatWeiß = null;
+                    matchUp.ResultatSchwarz = null;
+                }
+            }
+        }
+
+        private static void GetIndexByName(List<Player> orderedPlayersByName, string name, out int index)
+        {
+            index = orderedPlayersByName
+            .Select((player, idx) => new { Player = player, Index = idx })
+            .FirstOrDefault(x => x.Player.Name == name)?.Index ?? -1;
+        }
+
         private static void FillSchachMatches(List<List<Tuple<Player, Player>>> allRoundParings, List<Player> orderedPlayersByName, Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer)
         {
             foreach (var player in orderedPlayersByName)
@@ -99,11 +329,11 @@ namespace MyApp
                     {
                         if (pairing.Item1.Name == player.Name)
                         {
-                            playersOpponentsList.Add(new SchachMatch() { Schwarz = player, Weiß = pairing.Item2 });
+                            playersOpponentsList.Add(new SchachMatch() { Schwarz = player, Weiss = pairing.Item2 });
                         }
                         else if (pairing.Item2.Name == player.Name)
                         {
-                            playersOpponentsList.Add(new SchachMatch() { Schwarz = pairing.Item1, Weiß = player });
+                            playersOpponentsList.Add(new SchachMatch() { Schwarz = pairing.Item1, Weiss = player });
                         }
                     }
                 }
@@ -121,60 +351,138 @@ namespace MyApp
             for (int i = 0; i < orderedPlayersByName.Count; i++)
             {
                 Player? player = orderedPlayersByName[i];
-                SchachMatchesCopy = listOfSchachMatchingsPerPlayer[player].OrderBy(x => (x.Schwarz.Name == player.Name ? x.Weiß.Name : x.Schwarz.Name)).ToList();
-                copy[player] = SchachMatchesCopy;
+                SchachMatchesCopy = listOfSchachMatchingsPerPlayer[player].OrderBy(x => (x.Schwarz.Name == player.Name ? x.Weiss.Name : x.Schwarz.Name)).ToList();
+
+                var realMatches = new List<SchachMatch>();
+                foreach (var match in SchachMatchesCopy)
+                {
+                    if (!match.Schwarz.Name.StartsWith("-") && !match.Weiss.Name.StartsWith("-"))
+                    {
+                        realMatches.Add(match);
+                    }
+                }
+                copy[player] = realMatches;
             }
-            //var sortedSchachMatches = SchachMatches.OrderBy(SchachMatch => SchachMatch.Player1 == oliver ? SchachMatch.Player2.Name : SchachMatch.Player1.Name)
-            //                       .ToList();
+
+
 
             CreateHeaderForStandings(orderedPlayersByName);
+
+            var psydoPlayerExists = true;
+            if (orderedPlayersByName.Where(x => x.Name.StartsWith("-")).ToList().Count == 0)
+            {
+                psydoPlayerExists = false;
+            }
+
             for (int i = 0; i < orderedPlayersByName.Count; i++)
             {
                 Player? player = orderedPlayersByName[i];
                 var cell = "";
-
-                for (int j = 0; j < copy[player].Count; j++)
+                if (!player.Name.StartsWith("-"))
                 {
-                    if (j == i)
+                    for (int j = 0; j < copy[player].Count; j++)
                     {
-                        cell += "".PadRight(11,'-') + " | ";
-                    }
-                    if (copy[player][j].Weiß.Name == player.Name)
-                    {
-                        if (copy[player][j].ResultatWeiß != null)
+                        if (psydoPlayerExists)
                         {
-                            cell += copy[player][j].ResultatWeiß?.ToString().PadRight(12) + "| ";
+                            if (copy[player][j].Schwarz.Name.StartsWith("-") || copy[player][j].Weiss.Name.StartsWith("-"))
+                            {
+                                continue;
+                            }
+                            if (j + 1 == i)
+                            {
+                                cell += "".PadRight(11, '-') + " | ";
+                            }
+                            if (copy[player][j].Weiss.Name == player.Name)
+                            {
+                                if (copy[player][j].ResultatWeiß != null)
+                                {
+                                    cell += copy[player][j].ResultatWeiß?.ToString().PadRight(12) + "| ";
+                                }
+                                else
+                                {
+                                    cell += "".PadRight(12) + "| ";
+                                }
+                            }
+                            else if (copy[player][j].Schwarz.Name == player.Name)
+                            {
+                                if (copy[player][j].ResultatSchwarz != null)
+                                {
+                                    cell += copy[player][j].ResultatSchwarz?.ToString().PadRight(12) + "| ";
+                                }
+                                else
+                                {
+                                    cell += "".PadRight(12) + "| ";
+                                }
+                            }
+                            else
+                            {
+                                cell += "".PadRight(12) + "| ";
+                            }
+
+
+                            if (i == orderedPlayersByName.Count - 1 && j == copy[player].Count - 1)
+                            {
+                                cell += "".PadRight(11, '-') + " | ";
+                            }
+
                         }
                         else
                         {
-                            cell += "".PadRight(12) + "| ";
+                            if (j == i)
+                            {
+                                cell += "".PadRight(11, '-') + " | ";
+                            }
+                            if (copy[player][j].Weiss.Name == player.Name)
+                            {
+                                if (copy[player][j].ResultatWeiß != null)
+                                {
+                                    cell += copy[player][j].ResultatWeiß?.ToString().PadRight(12) + "| ";
+                                }
+                                else
+                                {
+                                    cell += "".PadRight(12) + "| ";
+                                }
+                            }
+                            else if (copy[player][j].Schwarz.Name == player.Name)
+                            {
+                                if (copy[player][j].ResultatSchwarz != null)
+                                {
+                                    cell += copy[player][j].ResultatSchwarz?.ToString().PadRight(12) + "| ";
+                                }
+                                else
+                                {
+                                    cell += "".PadRight(12) + "| ";
+                                }
+                            }
+                            else
+                            {
+                                cell += "".PadRight(12) + "| ";
+                            }
+
+
+                            if (i == orderedPlayersByName.Count - 1 && j == copy[player].Count - 1)
+                            {
+                                cell += "".PadRight(11, '-') + " | ";
+                            }
+
                         }
+
                     }
-                    else if (copy[player][j].Schwarz.Name == player.Name)
+
+                    Console.WriteLine($"| {player.Name,-12}| {cell}");
+
+                    if (psydoPlayerExists)
                     {
-                        if (copy[player][j].ResultatSchwarz != null)
-                        {
-                            cell += copy[player][j].ResultatSchwarz?.ToString().PadRight(12) + "| ";
-                        }
-                        else
-                        {
-                            cell += "".PadRight(12) + "| ";
-                        }
+                        Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
+
                     }
                     else
                     {
-                        cell += "".PadRight(12) + "| ";
+                        Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count + 1)}");
                     }
 
 
-                    if (i == orderedPlayersByName.Count - 1 && j == copy[player].Count - 1)
-                    {
-                        cell += "".PadRight(11, '-') + " | ";
-                    }
                 }
-
-                Console.WriteLine($"| {player.Name,-12}| {cell}");
-                Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count + 1)}");
             }
 
             Console.WriteLine();
@@ -184,27 +492,55 @@ namespace MyApp
 
             foreach (var player in copy.Keys)
             {
-                sumCells += player.GetResult().ToString().PadRight(12) + "| ";
+                if (!player.Name.StartsWith("-"))
+                {
+                    sumCells += player.GetResult().ToString().PadRight(12) + "| ";
+                }
             }
 
             Console.WriteLine($"| {"Summe:",-12}| {sumCells}");
-            Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count + 1)}");
+            if (psydoPlayerExists)
+            {
+                Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
+
+            }
+            else
+            {
+                Console.WriteLine($"+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count + 1)}");
+            }
         }
 
         private static void CreateHeaderForStandings(List<Player> orderedPlayersByName)
         {
             var allPlayers = "";
+            var extraPlayer = false;
             foreach (var player in orderedPlayersByName)
             {
-                allPlayers += " ";
-                allPlayers += player.Name.PadRight(12, ' ');
-                allPlayers += "|";
+
+                if (!player.Name.StartsWith("-"))
+                {
+                    allPlayers += " ";
+                    allPlayers += player.Name.PadRight(12, ' ');
+                    allPlayers += "|";
+                }
+                else
+                {
+                    extraPlayer = true;
+                }
             }
 
-
-            Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
-            Console.WriteLine($"|             |{allPlayers}");
-            Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
+            if (extraPlayer)
+            {
+                Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count - 1)}");
+                Console.WriteLine($"|             |{allPlayers}");
+                Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count - 1)}");
+            }
+            else
+            {
+                Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
+                Console.WriteLine($"|             |{allPlayers}");
+                Console.WriteLine($"+-------------+{new System.Text.StringBuilder().Insert(0, "-------------+", orderedPlayersByName.Count)}");
+            }
         }
 
         private static void AddResult(List<Player> players, List<List<Tuple<Player, Player>>> allRoundParings, Dictionary<Player, List<SchachMatch>> listOfSchachMatchingsPerPlayer)
@@ -212,19 +548,24 @@ namespace MyApp
             var orderedPlayersByName = players.OrderBy(x => x.Name).ToList();
 
 
-           
+
             Console.WriteLine("Welcher Spieler bekommt ein Resultat?");
+
             for (int i = 0; i < orderedPlayersByName.Count; i++)
             {
                 Player? player = orderedPlayersByName[i];
-                Console.WriteLine($"{i + 1} ... {player.Name}");
+                if (!player.Name.StartsWith("-"))
+                {
+                    Console.WriteLine($"{i} ... {player.Name}");
+                }
+
             }
-            
+
             var eingabe1Falsch = true;
             while (eingabe1Falsch)
             {
                 var playerFigure = Console.ReadLine();
-                
+
                 if (!int.TryParse(playerFigure, out var intPlayerFigure))
                 {
                     continue;
@@ -236,25 +577,30 @@ namespace MyApp
                     for (int i = 0; i < orderedPlayersByName.Count; i++)
                     {
                         Player? player = orderedPlayersByName[i];
-                        //if(intPlayerFigure != i + 1)
-                        //{
-                            Console.WriteLine($"{i + 1} ... {player.Name}");
-                        //}
+                        if (!player.Name.StartsWith("-"))
+                        {
+                            Console.WriteLine($"{i} ... {player.Name}");
+                        }
+                        else
+                        {
+                            Console.WriteLine();
+                        }
+
                     }
 
                     var secondPlayerFigure = Console.ReadLine();
-                    if (!int.TryParse(secondPlayerFigure, out var intSecondPlayerFigure))
+                    if (!int.TryParse(secondPlayerFigure, out var indexWeiss))
                     {
                         continue;
                     }
 
 
                     var eingabe3Falsch = true;
-                    while(eingabe3Falsch)
+                    while (eingabe3Falsch)
                     {
-                        Console.WriteLine($"Resultat: {orderedPlayersByName[intPlayerFigure-1].Name} vs {orderedPlayersByName[intSecondPlayerFigure - 1].Name}");
-                        Console.WriteLine($"1 ... {orderedPlayersByName[intPlayerFigure - 1].Name} hat gewonnen");
-                        Console.WriteLine($"2 ... {orderedPlayersByName[intSecondPlayerFigure - 1].Name} hat gewonnen");
+                        Console.WriteLine($"Resultat: {orderedPlayersByName[intPlayerFigure].Name} vs {orderedPlayersByName[indexWeiss].Name}");
+                        Console.WriteLine($"1 ... {orderedPlayersByName[intPlayerFigure].Name} hat gewonnen");
+                        Console.WriteLine($"2 ... {orderedPlayersByName[indexWeiss].Name} hat gewonnen");
                         Console.WriteLine($"3 ... unendschieden");
 
                         var result = Console.ReadLine();
@@ -263,148 +609,14 @@ namespace MyApp
                         {
                             continue;
                         }
+                        SaveResult(listOfSchachMatchingsPerPlayer, orderedPlayersByName, intPlayerFigure, indexWeiss, intResult);
 
-
-                        switch (intResult)
-                        {
-                            case 1:
-                                // erster spieler hat gewonnen
-
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intPlayerFigure - 1]])
-                                {
-                                    if(SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 1;
-                                        SchachMatch.ResultatWeiß = 0;
-                                        SchachMatch.Schwarz.AddWin();
-                                        SchachMatch.Weiß.AddLose();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0;
-                                        SchachMatch.ResultatWeiß = 1;
-                                        SchachMatch.Weiß.AddWin();
-                                        SchachMatch.Schwarz.AddLose();
-                                        break;
-                                    }
-                                }
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intSecondPlayerFigure - 1]])
-                                {
-
-                                    if (SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0;
-                                        SchachMatch.ResultatWeiß = 1;
-                                        SchachMatch.Weiß.AddWin();
-                                        SchachMatch.Schwarz.AddLose();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 1;
-                                        SchachMatch.ResultatWeiß = 0;
-                                        SchachMatch.Schwarz.AddWin();
-                                        SchachMatch.Weiß.AddLose();
-                                        break;
-                                    }
-                                }
-                                break;
-                            case 2:
-                                // zweiter spieler hat gewonnen
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intSecondPlayerFigure - 1]])
-                                {
-                                    if (SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 1;
-                                        SchachMatch.ResultatWeiß = 0;
-                                        SchachMatch.Schwarz.AddWin();
-                                        SchachMatch.Weiß.AddLose();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0;
-                                        SchachMatch.ResultatWeiß = 1;
-                                        SchachMatch.Weiß.AddWin();
-                                        SchachMatch.Schwarz.AddLose();
-                                        break;
-                                    }
-                                }
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intPlayerFigure - 1]])
-                                {
-
-                                    if (SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0;
-                                        SchachMatch.ResultatWeiß = 1;
-                                        SchachMatch.Weiß.AddWin();
-                                        SchachMatch.Schwarz.AddLose();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 1;
-                                        SchachMatch.ResultatWeiß = 0;
-                                        SchachMatch.Schwarz.AddWin();
-                                        SchachMatch.Weiß.AddLose();
-                                        break;
-                                    }
-                                }
-                                break;
-                            case 3:
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intSecondPlayerFigure - 1]])
-                                {
-                                    if (SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0.5M;
-                                        SchachMatch.ResultatWeiß = 0.5M;
-                                        SchachMatch.Schwarz.AddDraw();
-                                        SchachMatch.Weiß.AddDraw();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0.5M;
-                                        SchachMatch.ResultatWeiß = 0.5M;
-                                        SchachMatch.Schwarz.AddDraw();
-                                        SchachMatch.Weiß.AddDraw();
-                                        break;
-                                    }
-                                }
-                                foreach (var SchachMatch in listOfSchachMatchingsPerPlayer[orderedPlayersByName[intPlayerFigure - 1]])
-                                {
-
-                                    if (SchachMatch.Schwarz.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Weiß.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0.5M;
-                                        SchachMatch.ResultatWeiß = 0.5M;
-                                        SchachMatch.Schwarz.AddDraw();
-                                        SchachMatch.Weiß.AddDraw();
-                                        break;
-                                    }
-                                    if (SchachMatch.Weiß.Name == orderedPlayersByName[intPlayerFigure - 1].Name && SchachMatch.Schwarz.Name == orderedPlayersByName[intSecondPlayerFigure - 1].Name)
-                                    {
-                                        SchachMatch.ResultatSchwarz = 0.5M;
-                                        SchachMatch.ResultatWeiß = 0.5M;
-                                        SchachMatch.Schwarz.AddDraw();
-                                        SchachMatch.Weiß.AddDraw();
-                                        break;
-                                    }
-                                }
-                                break;
-                        }
-
-                        eingabe1Falsch = false;
-                        eingabe2Falsch = false;
                         eingabe3Falsch = false;
+                        eingabe2Falsch = false;
+                        eingabe1Falsch = false;
                     }
-
                 }
             }
-            
-
-
         }
 
         private static void PrintMenu()
@@ -413,6 +625,7 @@ namespace MyApp
             Console.WriteLine("1 ... Show the Pairing");
             Console.WriteLine("2 ... Add Result");
             Console.WriteLine("3 ... Show current Results");
+            Console.WriteLine("4 ... Create Predictions");
             Console.WriteLine("9 ... Exit");
             Console.WriteLine("\n+-------------+-------------+-------------+\n");
 
@@ -429,20 +642,20 @@ namespace MyApp
             players.Add(new Player() { Name = "Boris", Elo = 450 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
             players.Add(new Player() { Name = "Angelo", Elo = 350 });
-            players.Add(new Player() { Name = "Harpreet", Elo = 700 });
-            players.Add(new Player() { Name = "Oliver", Elo = 400 });
-            players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
-            players.Add(new Player() { Name = "Denise", Elo = 300 });
-            players.Add(new Player() { Name = "Benedikt", Elo = 800 });
-            players.Add(new Player() { Name = "Luca", Elo = 1200 });
+            //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
+            //players.Add(new Player() { Name = "Oliver", Elo = 400 });
+            //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
+            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            //players.Add(new Player() { Name = "Denise", Elo = 300 });
+            //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
+            //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
         }
 
         private static void DownloadAsCsv(List<List<Tuple<Player, Player>>> allRoundParings)
         {
             using (var writer = new StreamWriter($"C:\\Users\\marce\\Desktop\\TestExcel\\test_{DateTime.UtcNow.Ticks}.csv"))
-            using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ";"}))
+            using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ";" }))
             {
                 csv.WriteField("Round 0");
                 csv.WriteField("Board 1");
@@ -460,7 +673,7 @@ namespace MyApp
                 csv.WriteField("White");
                 csv.WriteField("Black");
                 csv.WriteField("White");
-                if(BOARDS_TO_BE_PLAYED_ON == 3)
+                if (BOARDS_TO_BE_PLAYED_ON == 3)
                 {
                     csv.WriteField("Black");
                     csv.WriteField("White");
@@ -470,7 +683,7 @@ namespace MyApp
                 // Write data
                 for (int i = 0; i < allRoundParings.Count; i++)
                 {
-                    if(BOARDS_TO_BE_PLAYED_ON == 2)
+                    if (BOARDS_TO_BE_PLAYED_ON == 2)
                     {
                         for (int k = 0; k < allRoundParings[i].Count - 1; k += 2)
                         {
@@ -490,7 +703,7 @@ namespace MyApp
 
                         }
                     }
-                    if(BOARDS_TO_BE_PLAYED_ON == 3)
+                    if (BOARDS_TO_BE_PLAYED_ON == 3)
                     {
                         for (int j = 0; j < allRoundParings[i].Count - 2; j += 3)
                         {
@@ -527,7 +740,7 @@ namespace MyApp
                 }
                 writer.Flush();
             }
-            
+
         }
 
         static void GiveStatistics(List<Player> players)
@@ -838,8 +1051,4 @@ namespace MyApp
             Console.WriteLine("+----------+-------------+-------------+-------------+-------------+\n");
         }
     }
-
-
-
-   
-}
+ }
