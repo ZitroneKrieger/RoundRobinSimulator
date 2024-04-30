@@ -14,8 +14,11 @@ namespace MyApp
     internal class Program
     {
         const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 1; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
-        const int BOARDS_TO_BE_PLAYED_ON = 2; // 2 oder 3
+        const int BOARDS_TO_BE_PLAYED_ON = 3; // 2 oder 3
         const int MAX_TRIES_TO_GET_LUCKY = 10000; // timeout damit nicht endlosschleife passiert weil keine SchachMatches mehr passieren können
+        private const int PLAYERS_ON_A_CHESS_BOARD = 2;
+        private const int maximumWidthOfExcelSheet = 16;
+
         static void Main(string[] args)
         {
             //Marcel Michael Angelo Nathalie Boris Harpreet Kim Oliver Pavle Kevin Kama Zeljko Luca Denise Benedikt
@@ -34,12 +37,14 @@ namespace MyApp
 
             GiveStatistics(players);
 
-            DownloadAsCsv(allRoundParings);
+            var orderedPlayersByName = players.OrderBy(x => x.Name).ToList();
+            //DownloadAsCsv(allRoundParings);
+
+            SecondExcelForStanding(allRoundParings, orderedPlayersByName);
 
             var numericInput = true;
 
 
-            var orderedPlayersByName = players.OrderBy(x => x.Name).ToList();
 
             var listOfSchachMatchingsPerPlayer = new Dictionary<Player, List<SchachMatch>>();
             FillSchachMatches(allRoundParings, orderedPlayersByName, listOfSchachMatchingsPerPlayer);
@@ -642,7 +647,7 @@ namespace MyApp
             players.Add(new Player() { Name = "Boris", Elo = 450 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
             players.Add(new Player() { Name = "Angelo", Elo = 350 });
-            //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
+            players.Add(new Player() { Name = "Harpreet", Elo = 700 });
             //players.Add(new Player() { Name = "Oliver", Elo = 400 });
             //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
             //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
@@ -743,8 +748,217 @@ namespace MyApp
 
         }
 
+        private static void SecondExcelForStanding(List<List<Tuple<Player, Player>>> allRoundParings, List<Player> orderedPlayersByName)
+        {
+            using (var writer = new StreamWriter($"C:\\Users\\marce\\Desktop\\TestExcel\\Scoresheet_{DateTime.UtcNow.Ticks}.csv"))
+            using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ";" }))
+            {
+
+                var howManyColumnsCanBeFilled = HowManyColumnsCanBeFilled(allRoundParings);
+
+                var indexToStart = 0;
+
+                List<Player> allBlack, allWhite;
+
+                createListsOfAllWhiteAndBlackForCSV(allRoundParings, howManyColumnsCanBeFilled, out allBlack, out allWhite);
+
+                var Columns = 0;
+                var nextIndex = CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, indexToStart);
+
+                csv.NextRecord();
+
+                var wieVieleRundenInEinerZeile = maximumWidthOfExcelSheet / (Math.Ceiling(allRoundParings[0].Count / (decimal)BOARDS_TO_BE_PLAYED_ON) * 2);
+
+                var anzBoardRowsOnScreen = Math.Ceiling(allRoundParings.Count / wieVieleRundenInEinerZeile);
+
+                var nextRowsIndex = 0;
+
+                for (int k = 0; k < anzBoardRowsOnScreen; k++)
+                {
+                    
+                    var thisRowsIndex = 0;
+
+                    var blub = k > 0 ? nextRowsIndex - (BOARDS_TO_BE_PLAYED_ON - 1) : 0;
+
+                    for (int i = blub; i < BOARDS_TO_BE_PLAYED_ON + blub; i++)
+                    {
+                        thisRowsIndex = i;
+
+                        csv.WriteField($"Board {i + 1 - blub}");
+                        for (int j = 0; j < PLAYERS_ON_A_CHESS_BOARD; j++)
+                        {
+
+                            Columns = 0;
+                            if (j % 2 == 0) //black Row
+                            {
+                                csv.WriteField("Black");
+                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allBlack, thisRowsIndex);
+                                csv.NextRecord();
+                                csv.WriteField("");
+                            }
+                            else // white row
+                            {
+                                csv.WriteField("White");
+                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allWhite, thisRowsIndex);
+
+                                csv.NextRecord();
+                            }
+
+
+                        }
+                    }
+
+                    csv.NextRecord();
+
+                    if (anzBoardRowsOnScreen - 1 != k)
+                    {
+                        Columns = 0;
+                        nextIndex = CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, nextIndex);
+                        csv.NextRecord();
+                    }
+                }
+
+
+               
+
+                writer.Flush();
+            }
+        }
+
+        private static void createListsOfAllWhiteAndBlackForCSV(List<List<Tuple<Player, Player>>> allRoundParings, decimal howManyColumnsCanBeFilled, out List<Player> allBlack, out List<Player> allWhite)
+        {
+            var allBlackCopy = allRoundParings
+               .SelectMany(round => round.Select(pairing => pairing.Item1))
+               .ToList();
+
+            allBlack = new List<Player>();
+
+            var allWhiteCopy = allRoundParings
+              .SelectMany(round => round.Select(pairing => pairing.Item2))
+              .ToList();
+
+            allWhite = new List<Player>();
+            var matchesPlatzImExcel = Math.Ceiling(howManyColumnsCanBeFilled) * BOARDS_TO_BE_PLAYED_ON;
+
+            ManipulateListsForBetterFormatting(allRoundParings, allBlackCopy, allBlack, allWhiteCopy, allWhite, matchesPlatzImExcel);
+        }
+
+        private static void ManipulateListsForBetterFormatting(List<List<Tuple<Player, Player>>> allRoundParings, List<Player> allBlackCopy, List<Player> allBlack, List<Player> allWhiteCopy, List<Player> allWhite, decimal matchesPlatzImExcel)
+        {
+            for (int i = 0; i < allWhiteCopy.Count; i++)
+            {
+
+                if (i != 0 && i % (allRoundParings[0].Count) == 0)
+                {
+                    for (int j = 0; j < matchesPlatzImExcel - allRoundParings[0].Count; j++)
+                    {
+                        allWhite.Add(null);
+                    }
+                }
+
+                allWhite.Add(allWhiteCopy[i]);
+
+            }
+
+            allWhite.Add(null);
+
+            for (int i = 0; i < allBlackCopy.Count; i++)
+            {
+
+                if (i != 0 && i % (allRoundParings[0].Count) == 0)
+                {
+                    for (int j = 0; j < matchesPlatzImExcel - allRoundParings[0].Count; j++)
+                    {
+                        allBlack.Add(null);
+                    }
+                }
+
+                allBlack.Add(allBlackCopy[i]);
+
+            }
+
+            allBlack.Add(null);
+        }
+
+        private static int NextRow(CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, List<Player> playerlist, int nextIndex)
+        {
+            for (var i = nextIndex; i < playerlist.Count; i += BOARDS_TO_BE_PLAYED_ON)
+            {
+                if (howManyColumnsCanBeFilled > 1)
+                {
+
+                    if (playerlist[i] != null)
+                    {
+                        csv.WriteField(playerlist[i].Name);
+                    }
+                    else
+                    {
+                        csv.WriteField("");
+                    }
+                    csv.WriteField("");
+
+                    Columns += 2;
+                    if (Columns == 16)
+                    {
+                        nextIndex = i + BOARDS_TO_BE_PLAYED_ON;
+                        break;
+                    }
+                }
+
+            }
+            return nextIndex;
+        }
+
+        private static int CreateRoundHeadersForCSV(List<List<Tuple<Player, Player>>> allRoundParings, CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, int indexToStart)
+        {
+            csv.WriteField("");
+            csv.WriteField("");
+
+            var latestIteration = 0;
+            for (var i = indexToStart; i < allRoundParings.Count; i++)
+            {
+
+                if (howManyColumnsCanBeFilled > 1)
+                {
+                    for (var j = 0; j < Math.Ceiling(howManyColumnsCanBeFilled); j++)
+                    {
+                        csv.WriteField($"Round {i + 1}");
+                        csv.WriteField("ERG");
+
+                        Columns += 2;
+                        if (Columns == 16)
+                        {
+                            break;
+                        }
+                    }
+                }
+                else if (howManyColumnsCanBeFilled == 1)
+                {
+
+                }
+                else
+                {
+
+                }
+
+
+                if (Columns == 16)
+                {
+                    latestIteration = i + 1;
+                    break;
+                }
+            }
+            return latestIteration;
+        }
+
+        private static decimal HowManyColumnsCanBeFilled(List<List<Tuple<Player, Player>>> allRoundParings)
+        {
+            return allRoundParings[0].Count / (decimal)BOARDS_TO_BE_PLAYED_ON;
+        }
+
         static void GiveStatistics(List<Player> players)
         {
+            Console.WriteLine();
             Console.WriteLine($"Statistiken zur Fairnessbewertung:");
             foreach (var item in players.OrderBy(x => x.Name))
             {
@@ -1051,4 +1265,4 @@ namespace MyApp
             Console.WriteLine("+----------+-------------+-------------+-------------+-------------+\n");
         }
     }
- }
+}
