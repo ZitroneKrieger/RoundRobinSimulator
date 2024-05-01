@@ -13,11 +13,11 @@ namespace MyApp
 {
     internal class Program
     {
-        const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 1; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
-        const int BOARDS_TO_BE_PLAYED_ON = 3; // 2 oder 3
+        const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 3; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
+        const int BOARDS_TO_BE_PLAYED_ON = 1; // 2 oder 3
         const int MAX_TRIES_TO_GET_LUCKY = 10000; // timeout damit nicht endlosschleife passiert weil keine SchachMatches mehr passieren können
         private const int PLAYERS_ON_A_CHESS_BOARD = 2;
-        private const int maximumWidthOfExcelSheet = 16;
+        private const int MAXIMUM_WIDTH_OF_EXCEL_SHEET = 16;
 
         static void Main(string[] args)
         {
@@ -640,18 +640,18 @@ namespace MyApp
         {
             var players = new List<Player>();
             players.Add(new Player() { Name = "Marcel", Elo = 1850 });
-            players.Add(new Player() { Name = "Kevin", Elo = 900 });
             players.Add(new Player() { Name = "Nathalie", Elo = 1100 });
             players.Add(new Player() { Name = "Michael", Elo = 1000 });
+            players.Add(new Player() { Name = "Kevin", Elo = 900 });
             players.Add(new Player() { Name = "Kim", Elo = 1000 });
             players.Add(new Player() { Name = "Boris", Elo = 450 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
             players.Add(new Player() { Name = "Angelo", Elo = 350 });
             players.Add(new Player() { Name = "Harpreet", Elo = 700 });
-            //players.Add(new Player() { Name = "Oliver", Elo = 400 });
-            //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
-            //players.Add(new Player() { Name = "Denise", Elo = 300 });
+            players.Add(new Player() { Name = "Oliver", Elo = 400 });
+            players.Add(new Player() { Name = "Pavle", Elo = 1400 });
+            players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            players.Add(new Player() { Name = "Denise", Elo = 300 });
             //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
             //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
@@ -758,24 +758,32 @@ namespace MyApp
 
                 var indexToStart = 0;
 
+                var optimalBoardsToPlay = howManyColumnsCanBeFilled * BOARDS_TO_BE_PLAYED_ON;
+
                 List<Player> allBlack, allWhite;
 
                 createListsOfAllWhiteAndBlackForCSV(allRoundParings, howManyColumnsCanBeFilled, out allBlack, out allWhite);
 
-                var Columns = 0;
-                var nextIndex = CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, indexToStart);
+                
+                var nextIndex = 0;
 
                 csv.NextRecord();
 
-                var wieVieleRundenInEinerZeile = maximumWidthOfExcelSheet / (Math.Ceiling(allRoundParings[0].Count / (decimal)BOARDS_TO_BE_PLAYED_ON) * 2);
+                var wieVieleRundenInEinerZeile = MAXIMUM_WIDTH_OF_EXCEL_SHEET / (Math.Ceiling(allRoundParings[0].Count / (decimal)BOARDS_TO_BE_PLAYED_ON) * 2);
 
                 var anzBoardRowsOnScreen = Math.Ceiling(allRoundParings.Count / wieVieleRundenInEinerZeile);
 
                 var nextRowsIndex = 0;
+                var missingSubiterations = 0;
 
                 for (int k = 0; k < anzBoardRowsOnScreen; k++)
                 {
-                    
+                    var Columns = 0;
+
+
+                    nextIndex = CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, nextIndex, ref missingSubiterations);
+                    csv.NextRecord();
+
                     var thisRowsIndex = 0;
 
                     var blub = k > 0 ? nextRowsIndex - (BOARDS_TO_BE_PLAYED_ON - 1) : 0;
@@ -810,12 +818,12 @@ namespace MyApp
 
                     csv.NextRecord();
 
-                    if (anzBoardRowsOnScreen - 1 != k)
-                    {
-                        Columns = 0;
-                        nextIndex = CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, nextIndex);
-                        csv.NextRecord();
-                    }
+                    //if (anzBoardRowsOnScreen - 1 != k)
+                    //{
+                    //    Columns = 0;
+                    //     CreateRoundHeadersForCSV(allRoundParings, csv, ref Columns, howManyColumnsCanBeFilled, nextIndex);
+                    //    csv.NextRecord();
+                    //}
                 }
 
 
@@ -884,8 +892,8 @@ namespace MyApp
         {
             for (var i = nextIndex; i < playerlist.Count; i += BOARDS_TO_BE_PLAYED_ON)
             {
-                if (howManyColumnsCanBeFilled > 1)
-                {
+                //if (howManyColumnsCanBeFilled >= 1)
+                //{
 
                     if (playerlist[i] != null)
                     {
@@ -903,24 +911,31 @@ namespace MyApp
                         nextIndex = i + BOARDS_TO_BE_PLAYED_ON;
                         break;
                     }
-                }
+                //}
 
             }
             return nextIndex;
         }
 
-        private static int CreateRoundHeadersForCSV(List<List<Tuple<Player, Player>>> allRoundParings, CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, int indexToStart)
+        private static int CreateRoundHeadersForCSV(List<List<Tuple<Player, Player>>> allRoundParings, CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, int indexToStart, ref int missingSubIterations)
         {
             csv.WriteField("");
             csv.WriteField("");
 
             var latestIteration = 0;
+            var remainderIteration = false;
+            if(missingSubIterations > 0)
+            {
+                indexToStart--;
+                remainderIteration = true;
+            }
+
             for (var i = indexToStart; i < allRoundParings.Count; i++)
             {
 
-                if (howManyColumnsCanBeFilled > 1)
-                {
-                    for (var j = 0; j < Math.Ceiling(howManyColumnsCanBeFilled); j++)
+                //if (howManyColumnsCanBeFilled >= 1)
+                //{
+                    for (var j = missingSubIterations > 0 ? Math.Ceiling(howManyColumnsCanBeFilled) - missingSubIterations : 0; j < Math.Ceiling(howManyColumnsCanBeFilled); j++)
                     {
                         csv.WriteField($"Round {i + 1}");
                         csv.WriteField("ERG");
@@ -928,18 +943,20 @@ namespace MyApp
                         Columns += 2;
                         if (Columns == 16)
                         {
+                            missingSubIterations = (int) (Math.Ceiling(howManyColumnsCanBeFilled) - j) - 1;
                             break;
                         }
                     }
-                }
-                else if (howManyColumnsCanBeFilled == 1)
-                {
+                    if (remainderIteration)
+                    {
+                        remainderIteration = false;
+                        missingSubIterations = 0;
+                    }
+                //}
+                //else // mehr bretter als leute auf einmal spielen können??!! dubious move
+                //{
 
-                }
-                else
-                {
-
-                }
+                //}
 
 
                 if (Columns == 16)
