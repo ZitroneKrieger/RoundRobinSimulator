@@ -8,13 +8,15 @@ using System.Collections.Generic;
 using CsvHelper.Configuration.Attributes;
 using System.Text.RegularExpressions;
 using System.Numerics;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.VisualBasic;
 
 namespace MyApp
 {
     internal class Program
     {
         const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 3; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
-        const int BOARDS_TO_BE_PLAYED_ON = 1; // 2 oder 3
+        const int BOARDS_TO_BE_PLAYED_ON = 3; // 2 oder 3
         const int MAX_TRIES_TO_GET_LUCKY = 10000; // timeout damit nicht endlosschleife passiert weil keine SchachMatches mehr passieren können
         private const int PLAYERS_ON_A_CHESS_BOARD = 2;
         private const int MAXIMUM_WIDTH_OF_EXCEL_SHEET = 16;
@@ -646,12 +648,12 @@ namespace MyApp
             players.Add(new Player() { Name = "Kim", Elo = 1000 });
             players.Add(new Player() { Name = "Boris", Elo = 450 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
-            players.Add(new Player() { Name = "Angelo", Elo = 350 });
-            players.Add(new Player() { Name = "Harpreet", Elo = 700 });
-            players.Add(new Player() { Name = "Oliver", Elo = 400 });
-            players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
-            players.Add(new Player() { Name = "Denise", Elo = 300 });
+            //players.Add(new Player() { Name = "Angelo", Elo = 350 });
+            //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
+            //players.Add(new Player() { Name = "Oliver", Elo = 400 });
+            //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
+            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            //players.Add(new Player() { Name = "Denise", Elo = 300 });
             //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
             //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
@@ -760,11 +762,11 @@ namespace MyApp
 
                 var optimalBoardsToPlay = howManyColumnsCanBeFilled * BOARDS_TO_BE_PLAYED_ON;
 
-                List<Player> allBlack, allWhite;
+                List<ExcelWrapper> allBlack, allWhite;
 
                 createListsOfAllWhiteAndBlackForCSV(allRoundParings, howManyColumnsCanBeFilled, out allBlack, out allWhite);
 
-                
+
                 var nextIndex = 0;
 
                 csv.NextRecord();
@@ -775,6 +777,9 @@ namespace MyApp
 
                 var nextRowsIndex = 0;
                 var missingSubiterations = 0;
+
+                string startCellBlack = "D3";
+                string startCellWhite = "D4";
 
                 for (int k = 0; k < anzBoardRowsOnScreen; k++)
                 {
@@ -800,24 +805,32 @@ namespace MyApp
                             if (j % 2 == 0) //black Row
                             {
                                 csv.WriteField("Black");
-                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allBlack, thisRowsIndex);
+                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allBlack, thisRowsIndex, ref startCellBlack);
+                                var cell = startCellBlack;
                                 csv.NextRecord();
                                 csv.WriteField("");
                             }
                             else // white row
                             {
                                 csv.WriteField("White");
-                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allWhite, thisRowsIndex);
-
+                                nextRowsIndex = NextRow(csv, ref Columns, howManyColumnsCanBeFilled, allWhite, thisRowsIndex, ref startCellWhite);
+                                var cell = startCellWhite;
                                 csv.NextRecord();
                             }
 
 
                         }
+
+                        startCellWhite = GetNextExcelCell(startCellWhite, -Columns, 2);
+                        startCellBlack = GetNextExcelCell(startCellBlack, -Columns, 2);
+
                     }
 
                     csv.NextRecord();
 
+
+                    startCellWhite = GetNextExcelCell(startCellWhite, 0, 2);
+                    startCellBlack = GetNextExcelCell(startCellBlack, 0, 2);
                     //if (anzBoardRowsOnScreen - 1 != k)
                     //{
                     //    Columns = 0;
@@ -827,31 +840,179 @@ namespace MyApp
                 }
 
 
-               
+                csv.NextRecord();
+                csv.NextRecord();
+                csv.WriteField("");
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        csv.WriteField(player.Name);
+                    }
+                }
+
+                //D3 erstes ergebnisfeld von schwarz runde 1
+                csv.NextRecord();
+                for (int i = 0; i < orderedPlayersByName.Count; i++)
+                {
+                    if (!orderedPlayersByName[i].Name.StartsWith("-"))
+                    {
+                        csv.WriteField(orderedPlayersByName[i].Name);
+                        for (int j = 0; j < orderedPlayersByName.Count; j++)
+                        {
+                            if (!orderedPlayersByName[j].Name.StartsWith("-"))
+                            {
+                                if (i == j)
+                                {
+                                    csv.WriteField("--------------");
+                                    continue;
+                                }
+                                else
+                                {
+                                   
+                                    var index = GetIndexOfPairing(orderedPlayersByName[j], orderedPlayersByName[i], allBlack, allWhite);
+                                    if(orderedPlayersByName[j].Name == allBlack[index]?.Player?.Name)
+                                    {
+                                        csv.WriteField($"=WENN(ISTLEER({allWhite[index]?.ErgebnisZelle}); \"\"; {allWhite[index]?.ErgebnisZelle})");
+                                    }
+                                    else
+                                    {
+                                        csv.WriteField($"=WENN(ISTLEER({allBlack[index]?.ErgebnisZelle}); \"\"; {allBlack[index]?.ErgebnisZelle})");
+                                    }
+                                    
+
+                                }
+
+                            }
+
+                        }
+                        csv.NextRecord();
+                    }
+
+                }
+
+                var zellenAbstand = (int) anzBoardRowsOnScreen * BOARDS_TO_BE_PLAYED_ON * 2 + 2 + 2 + 1 + orderedPlayersByName.Where(x => !x.Name.StartsWith("-")).ToList().Count + 2;
+
+                var nextZelle = GetNextExcelCell("B1", 0, zellenAbstand);
+
+                csv.WriteField("");
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        csv.WriteField(player.Name);
+                    }
+                }
+                csv.NextRecord();
+                csv.WriteField("SUMME");
+
+                var realPlayerCount = orderedPlayersByName.Where(x => !x.Name.StartsWith("-")).ToList().Count;
+
+
+                var startCell = GetNextExcelCell(nextZelle, 0, realPlayerCount * -1);
+                var endCell = GetNextExcelCell(nextZelle, realPlayerCount - 1, realPlayerCount * -1);
+
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        csv.WriteField($"=SUMME({startCell}:{endCell})");
+                    }
+                    startCell = GetNextExcelCell(startCell, 0, 1);
+                    endCell = GetNextExcelCell(endCell, 0, 1);
+                }
+
+                csv.NextRecord();
+
+                var nextZelle2 = GetNextExcelCell("B1", 0, zellenAbstand + 2);
+                var startOfArray = nextZelle2;
+                var endofArray = GetNextExcelCell(startOfArray, realPlayerCount - 1, 0);
+                csv.WriteField("PLATZIERUNG");
+
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        csv.WriteField($"=RANG({nextZelle2};{startOfArray}:{endofArray};0)");
+                        nextZelle2 = GetNextExcelCell(nextZelle2, 1, 0);
+                    }
+                }
 
                 writer.Flush();
             }
         }
 
-        private static void createListsOfAllWhiteAndBlackForCSV(List<List<Tuple<Player, Player>>> allRoundParings, decimal howManyColumnsCanBeFilled, out List<Player> allBlack, out List<Player> allWhite)
+        private static int GetIndexOfPairing(Player player1, Player player2, List<ExcelWrapper> allBlack, List<ExcelWrapper> allWhite)
+        {
+            List<int> indexesPlayer1 = allBlack
+            .Select((value, index) => new { value, index })
+            .Where(pair => pair.value?.Player?.Name == player1.Name)
+            .Select(pair => pair.index)
+            .ToList();
+
+            List<int> indexesPlayer2 = allWhite
+            .Select((value, index) => new { value, index })
+            .Where(pair => pair.value?.Player?.Name == player2.Name)
+            .Select(pair => pair.index)
+            .ToList();
+
+            foreach (var pair in indexesPlayer1)
+            {
+                foreach (var pair2 in indexesPlayer2)
+                {
+                    if(pair == pair2)
+                    {
+                        return pair;
+                    }
+                }
+            }
+
+            List<int> indexesPlayer1_2 = allWhite
+            .Select((value, index) => new { value, index })
+            .Where(pair => pair.value?.Player?.Name == player1.Name)
+            .Select(pair => pair.index)
+            .ToList();
+
+            List<int> indexesPlayer2_2 = allBlack
+            .Select((value, index) => new { value, index })
+            .Where(pair => pair.value?.Player?.Name == player2.Name)
+            .Select(pair => pair.index)
+            .ToList();
+
+            foreach (var pair in indexesPlayer1_2)
+            {
+                foreach (var pair2 in indexesPlayer2_2)
+                {
+                    if (pair == pair2)
+                    {
+                        return pair;
+                    }
+                }
+            }
+
+            return -1;
+
+        }
+
+        private static void createListsOfAllWhiteAndBlackForCSV(List<List<Tuple<Player, Player>>> allRoundParings, decimal howManyColumnsCanBeFilled, out List<ExcelWrapper> allBlack, out List<ExcelWrapper> allWhite)
         {
             var allBlackCopy = allRoundParings
                .SelectMany(round => round.Select(pairing => pairing.Item1))
                .ToList();
 
-            allBlack = new List<Player>();
+            allBlack = new List<ExcelWrapper>();
 
             var allWhiteCopy = allRoundParings
               .SelectMany(round => round.Select(pairing => pairing.Item2))
               .ToList();
 
-            allWhite = new List<Player>();
+            allWhite = new List<ExcelWrapper>();
             var matchesPlatzImExcel = Math.Ceiling(howManyColumnsCanBeFilled) * BOARDS_TO_BE_PLAYED_ON;
 
             ManipulateListsForBetterFormatting(allRoundParings, allBlackCopy, allBlack, allWhiteCopy, allWhite, matchesPlatzImExcel);
         }
 
-        private static void ManipulateListsForBetterFormatting(List<List<Tuple<Player, Player>>> allRoundParings, List<Player> allBlackCopy, List<Player> allBlack, List<Player> allWhiteCopy, List<Player> allWhite, decimal matchesPlatzImExcel)
+        private static void ManipulateListsForBetterFormatting(List<List<Tuple<Player, Player>>> allRoundParings, List<Player> allBlackCopy, List<ExcelWrapper> allBlack, List<Player> allWhiteCopy, List<ExcelWrapper> allWhite, decimal matchesPlatzImExcel)
         {
             for (int i = 0; i < allWhiteCopy.Count; i++)
             {
@@ -860,15 +1021,15 @@ namespace MyApp
                 {
                     for (int j = 0; j < matchesPlatzImExcel - allRoundParings[0].Count; j++)
                     {
-                        allWhite.Add(null);
+                        allWhite.Add(new ExcelWrapper() { Player = null });
                     }
                 }
 
-                allWhite.Add(allWhiteCopy[i]);
+                allWhite.Add(new ExcelWrapper() { Player = allWhiteCopy[i] });
 
             }
 
-            allWhite.Add(null);
+            allWhite.Add(new ExcelWrapper() { Player = null });
 
             for (int i = 0; i < allBlackCopy.Count; i++)
             {
@@ -877,44 +1038,84 @@ namespace MyApp
                 {
                     for (int j = 0; j < matchesPlatzImExcel - allRoundParings[0].Count; j++)
                     {
-                        allBlack.Add(null);
+                        allBlack.Add(new ExcelWrapper() { Player = null });
                     }
                 }
 
-                allBlack.Add(allBlackCopy[i]);
+                allBlack.Add(new ExcelWrapper() { Player = allBlackCopy[i] });
 
             }
 
-            allBlack.Add(null);
+            allBlack.Add(new ExcelWrapper() { Player = null });
         }
 
-        private static int NextRow(CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, List<Player> playerlist, int nextIndex)
+        private static int NextRow(CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, List<ExcelWrapper> playerlist, int nextIndex, ref string startCell)
         {
             for (var i = nextIndex; i < playerlist.Count; i += BOARDS_TO_BE_PLAYED_ON)
             {
                 //if (howManyColumnsCanBeFilled >= 1)
                 //{
 
-                    if (playerlist[i] != null)
-                    {
-                        csv.WriteField(playerlist[i].Name);
-                    }
-                    else
-                    {
-                        csv.WriteField("");
-                    }
+                if (playerlist[i].Player != null)
+                {
+                    csv.WriteField(playerlist[i].Player.Name);
+                }
+                else
+                {
                     csv.WriteField("");
-
-                    Columns += 2;
-                    if (Columns == 16)
-                    {
-                        nextIndex = i + BOARDS_TO_BE_PLAYED_ON;
-                        break;
-                    }
+                }
+                csv.WriteField("");
+                playerlist[i].ErgebnisZelle = startCell.ToString();
+                startCell = GetNextExcelCell(startCell, 2, 0);
+                Columns += 2;
+                if (Columns == 16)
+                {
+                    nextIndex = i + BOARDS_TO_BE_PLAYED_ON;
+                    break;
+                }
                 //}
 
             }
             return nextIndex;
+        }
+
+        private static string GetNextExcelCell(string startCell, int movesRight, int movesDown)
+        {
+            List<string> alphabet = new List<string>() { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+
+            string colomns;
+            int intRows;
+            SeperateExcelCell(startCell, out colomns, out intRows);
+
+            string newColomn = MoveExcelCellRight(movesRight, alphabet, colomns);
+            newColomn = MoveExcelCellDown(movesDown, intRows, newColomn);
+
+            return newColomn;
+        }
+
+        private static string MoveExcelCellDown(int movesDown, int intRows, string newColomn)
+        {
+            newColomn += (intRows + movesDown).ToString();
+            return newColomn;
+        }
+
+        private static string MoveExcelCellRight(int movesRight, List<string> alphabet, string colomns)
+        {
+            return alphabet[alphabet.IndexOf(colomns) + movesRight];
+        }
+
+        private static void SeperateExcelCell(string startCell, out string colomns, out int intRows)
+        {
+            Regex regex = new Regex(@"\d");
+
+            // Find the index of the first numeric character
+            Match match = regex.Match(startCell);
+            int index = match.Index;
+
+            colomns = startCell.Substring(0, index);
+            string rows = startCell.Substring(index);
+
+            int.TryParse(rows, out intRows);
         }
 
         private static int CreateRoundHeadersForCSV(List<List<Tuple<Player, Player>>> allRoundParings, CsvWriter csv, ref int Columns, decimal howManyColumnsCanBeFilled, int indexToStart, ref int missingSubIterations)
@@ -924,7 +1125,7 @@ namespace MyApp
 
             var latestIteration = 0;
             var remainderIteration = false;
-            if(missingSubIterations > 0)
+            if (missingSubIterations > 0)
             {
                 indexToStart--;
                 remainderIteration = true;
@@ -935,23 +1136,23 @@ namespace MyApp
 
                 //if (howManyColumnsCanBeFilled >= 1)
                 //{
-                    for (var j = missingSubIterations > 0 ? Math.Ceiling(howManyColumnsCanBeFilled) - missingSubIterations : 0; j < Math.Ceiling(howManyColumnsCanBeFilled); j++)
-                    {
-                        csv.WriteField($"Round {i + 1}");
-                        csv.WriteField("ERG");
+                for (var j = missingSubIterations > 0 ? Math.Ceiling(howManyColumnsCanBeFilled) - missingSubIterations : 0; j < Math.Ceiling(howManyColumnsCanBeFilled); j++)
+                {
+                    csv.WriteField($"Round {i + 1}");
+                    csv.WriteField("ERG");
 
-                        Columns += 2;
-                        if (Columns == 16)
-                        {
-                            missingSubIterations = (int) (Math.Ceiling(howManyColumnsCanBeFilled) - j) - 1;
-                            break;
-                        }
-                    }
-                    if (remainderIteration)
+                    Columns += 2;
+                    if (Columns == 16)
                     {
-                        remainderIteration = false;
-                        missingSubIterations = 0;
+                        missingSubIterations = (int)(Math.Ceiling(howManyColumnsCanBeFilled) - j) - 1;
+                        break;
                     }
+                }
+                if (remainderIteration)
+                {
+                    remainderIteration = false;
+                    missingSubIterations = 0;
+                }
                 //}
                 //else // mehr bretter als leute auf einmal spielen können??!! dubious move
                 //{
@@ -965,6 +1166,7 @@ namespace MyApp
                     break;
                 }
             }
+
             return latestIteration;
         }
 
