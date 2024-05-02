@@ -1,4 +1,4 @@
-﻿using RoundRobinSimulator;
+using RoundRobinSimulator;
 using System.Diagnostics;
 using System;
 using CsvHelper;
