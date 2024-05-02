@@ -16,7 +16,7 @@ namespace MyApp
     internal class Program
     {
         const int AUFTEILUNG_SCHWARZ_WEISS_FAIRNESS_PARAM = 3; // 1 am fairsten ... 3 unfair // 1 langsam ... 3 Schnell
-        const int BOARDS_TO_BE_PLAYED_ON = 3; // 2 oder 3
+        const int BOARDS_TO_BE_PLAYED_ON = 2; // 2 oder 3
         const int MAX_TRIES_TO_GET_LUCKY = 10000; // timeout damit nicht endlosschleife passiert weil keine SchachMatches mehr passieren können
         private const int PLAYERS_ON_A_CHESS_BOARD = 2;
         private const int MAXIMUM_WIDTH_OF_EXCEL_SHEET = 16;
@@ -646,14 +646,14 @@ namespace MyApp
             players.Add(new Player() { Name = "Michael", Elo = 1000 });
             players.Add(new Player() { Name = "Kevin", Elo = 900 });
             players.Add(new Player() { Name = "Kim", Elo = 1000 });
-            players.Add(new Player() { Name = "Boris", Elo = 450 });
-            players.Add(new Player() { Name = "Kama", Elo = 1400 });
-            players.Add(new Player() { Name = "Angelo", Elo = 350 });
-            players.Add(new Player() { Name = "Harpreet", Elo = 700 });
-            players.Add(new Player() { Name = "Oliver", Elo = 400 });
-            players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
-            players.Add(new Player() { Name = "Denise", Elo = 300 });
+            //players.Add(new Player() { Name = "Boris", Elo = 450 });
+            //players.Add(new Player() { Name = "Kama", Elo = 1400 });
+            //players.Add(new Player() { Name = "Angelo", Elo = 350 });
+            //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
+            //players.Add(new Player() { Name = "Oliver", Elo = 400 });
+            //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
+            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            //players.Add(new Player() { Name = "Denise", Elo = 300 });
             //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
             //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
@@ -937,6 +937,60 @@ namespace MyApp
                         nextZelle2 = GetNextExcelCell(nextZelle2, 1, 0);
                     }
                 }
+
+                var nextZelle3 = GetNextExcelCell(nextZelle2, -realPlayerCount, 1);
+                var nextZelle4 = nextZelle3;
+                var nextZelle5 = nextZelle3;
+                csv.NextRecord();
+
+                csv.WriteField("");
+                csv.WriteField("2.");
+                csv.WriteField("1.");
+                csv.WriteField("3.");
+
+                csv.NextRecord();
+                csv.WriteField("PODIUM");
+
+                var ersterPlatz = "";
+
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        ersterPlatz += $"WENN({nextZelle3}=1;\" + \" & {GetNextExcelCell(nextZelle3, 0, -2)}; \"\") &";
+                        nextZelle3 = GetNextExcelCell(nextZelle3, 1, 0);
+                    }
+                }
+                ersterPlatz = ersterPlatz.Remove(ersterPlatz.Length - 1);
+
+                var zweiterPlatz = "";
+
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        zweiterPlatz += $"WENN({nextZelle4}=2;\" + \" & {GetNextExcelCell(nextZelle4, 0, -2)}; \"\") &";
+                        nextZelle4 = GetNextExcelCell(nextZelle4, 1, 0);
+                    }
+                }
+                zweiterPlatz = zweiterPlatz.Remove(zweiterPlatz.Length - 1);
+
+                var dritterPlatz = "";
+
+                foreach (var player in orderedPlayersByName)
+                {
+                    if (!player.Name.StartsWith("-"))
+                    {
+                        dritterPlatz += $"WENN({nextZelle5}=3;\" + \" & {GetNextExcelCell(nextZelle5, 0, -2)}; \"\") &";
+                        nextZelle5 = GetNextExcelCell(nextZelle5, 1, 0);
+                    }
+                }
+                dritterPlatz = dritterPlatz.Remove(dritterPlatz.Length - 1);
+
+
+                csv.WriteField("=" + zweiterPlatz);
+                csv.WriteField("=" + ersterPlatz);
+                csv.WriteField("=" + dritterPlatz);
 
                 writer.Flush();
             }
