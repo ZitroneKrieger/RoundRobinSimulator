@@ -648,12 +648,12 @@ namespace MyApp
             players.Add(new Player() { Name = "Kim", Elo = 1000 });
             players.Add(new Player() { Name = "Boris", Elo = 450 });
             players.Add(new Player() { Name = "Kama", Elo = 1400 });
-            //players.Add(new Player() { Name = "Angelo", Elo = 350 });
-            //players.Add(new Player() { Name = "Harpreet", Elo = 700 });
-            //players.Add(new Player() { Name = "Oliver", Elo = 400 });
-            //players.Add(new Player() { Name = "Pavle", Elo = 1400 });
-            //players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
-            //players.Add(new Player() { Name = "Denise", Elo = 300 });
+            players.Add(new Player() { Name = "Angelo", Elo = 350 });
+            players.Add(new Player() { Name = "Harpreet", Elo = 700 });
+            players.Add(new Player() { Name = "Oliver", Elo = 400 });
+            players.Add(new Player() { Name = "Pavle", Elo = 1400 });
+            players.Add(new Player() { Name = "Zeljko", Elo = 1100 });
+            players.Add(new Player() { Name = "Denise", Elo = 300 });
             //players.Add(new Player() { Name = "Benedikt", Elo = 800 });
             //players.Add(new Player() { Name = "Luca", Elo = 1200 });
             return players;
@@ -890,8 +890,9 @@ namespace MyApp
                     }
 
                 }
+                var realPlayerCount = orderedPlayersByName.Where(x => !x.Name.StartsWith("-")).ToList().Count;
 
-                var zellenAbstand = (int) anzBoardRowsOnScreen * BOARDS_TO_BE_PLAYED_ON * 2 + 2 + 2 + 1 + orderedPlayersByName.Where(x => !x.Name.StartsWith("-")).ToList().Count + 2;
+                var zellenAbstand = ((int) anzBoardRowsOnScreen * (BOARDS_TO_BE_PLAYED_ON + 1) * PLAYERS_ON_A_CHESS_BOARD) + 4;
 
                 var nextZelle = GetNextExcelCell("B1", 0, zellenAbstand);
 
@@ -906,11 +907,10 @@ namespace MyApp
                 csv.NextRecord();
                 csv.WriteField("SUMME");
 
-                var realPlayerCount = orderedPlayersByName.Where(x => !x.Name.StartsWith("-")).ToList().Count;
 
 
-                var startCell = GetNextExcelCell(nextZelle, 0, realPlayerCount * -1);
-                var endCell = GetNextExcelCell(nextZelle, realPlayerCount - 1, realPlayerCount * -1);
+                var startCell = GetNextExcelCell(nextZelle, 0, -1);
+                var endCell = GetNextExcelCell(nextZelle, realPlayerCount - 1,  -1);
 
                 foreach (var player in orderedPlayersByName)
                 {
@@ -924,7 +924,7 @@ namespace MyApp
 
                 csv.NextRecord();
 
-                var nextZelle2 = GetNextExcelCell("B1", 0, zellenAbstand + 2);
+                var nextZelle2 = GetNextExcelCell("B1", 0, zellenAbstand + realPlayerCount + 1);
                 var startOfArray = nextZelle2;
                 var endofArray = GetNextExcelCell(startOfArray, realPlayerCount - 1, 0);
                 csv.WriteField("PLATZIERUNG");
